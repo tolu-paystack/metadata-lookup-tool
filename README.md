@@ -1,6 +1,6 @@
 # Paystack Transaction Lookup Tool
 
-A modern web application for searching and viewing Paystack transaction details using transaction metadata. This tool allows merchants to easily search for transactions by date range and Action ID.
+A demo application for searching and viewing Paystack transaction details using transaction metadata. This tool allows merchants to easily search for transactions by date range and a custom field in the transaction metadata called an Action ID.
 
 ## Features
 
