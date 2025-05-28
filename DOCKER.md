@@ -30,7 +30,7 @@ First, you need to set up your environment variables with your Paystack API key:
 To build and start the application:
 
 ```bash
-docker compose up -d --build
+docker-compose up -d --build
 ```
 
 This command:
