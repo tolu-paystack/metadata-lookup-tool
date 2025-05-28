@@ -53,20 +53,13 @@ Quick start:
 
 ```bash
 # Copy the environment example
-cp env.example .env
+cp .env.example .env
 
 # Add your Paystack Secret Key to the .env file
 
 # Build and run with Docker Compose
-docker-compose up -d --build
+docker compose up -d --build
 ```
-
-## Technology Stack
-
-- **Framework**: [Next.js](https://nextjs.org) with TypeScript
-- **Styling**: Tailwind CSS
-- **API Integration**: Paystack API
-- **Containerization**: Docker
 
 ## Action ID Format
 
