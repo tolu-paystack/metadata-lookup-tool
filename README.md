@@ -58,7 +58,7 @@ cp .env.example .env
 # Add your Paystack Secret Key to the .env file
 
 # Build and run with Docker Compose
-docker compose up -d --build
+docker-compose up -d --build
 ```
 
 ## Action ID Format
