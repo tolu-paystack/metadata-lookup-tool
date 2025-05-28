@@ -1,103 +1,307 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+import Navbar from "./components/Navbar";
+import SearchForm from "./components/SearchForm";
+import TransactionCard from "./components/TransactionCard";
+import { fetchTransactionsByDateRange } from "./services/transactionService";
+import type { Transaction } from "@/types";
+
+interface StoredSearchParams {
+  startDate: string;
+  endDate: string;
+  actionId?: string;
+  page: number;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchPerformed, setSearchPerformed] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalResults, setTotalResults] = useState(0);
+  const [searchParams, setSearchParams] = useState<{
+    startDate: string;
+    endDate: string;
+    actionId?: string;
+  } | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Load saved search parameters when the component mounts
+  useEffect(() => {
+    const loadSavedSearch = async () => {
+      // Check if we're in a browser environment
+      if (typeof window !== "undefined") {
+        const savedSearch = localStorage.getItem("transactionSearchParams");
+
+        if (savedSearch) {
+          try {
+            const parsedParams = JSON.parse(savedSearch) as StoredSearchParams;
+            setSearchParams({
+              startDate: parsedParams.startDate,
+              endDate: parsedParams.endDate,
+              actionId: parsedParams.actionId,
+            });
+            setCurrentPage(parsedParams.page || 1);
+
+            // Execute the search with saved parameters
+            await performSearch(
+              parsedParams.startDate,
+              parsedParams.endDate,
+              parsedParams.page || 1,
+              parsedParams.actionId
+            );
+
+            setSearchPerformed(true);
+          } catch (error) {
+            console.error("Error parsing saved search parameters:", error);
+            localStorage.removeItem("transactionSearchParams");
+          }
+        }
+      }
+    };
+
+    loadSavedSearch();
+  }, []);
+
+  // Function to perform search and handle API response
+  const performSearch = async (
+    startDate: string,
+    endDate: string,
+    page: number = 1,
+    actionId?: string
+  ) => {
+    setIsLoading(true);
+
+    try {
+      const response = await fetchTransactionsByDateRange(
+        startDate,
+        endDate,
+        page,
+        actionId
+      );
+
+      if (response.success && response.data) {
+        setTransactions(response.data.transactions);
+        setTotalPages(response.data.pagination.totalPages);
+        setTotalResults(response.data.pagination.total);
+      } else {
+        console.error("Error fetching transactions:", response.error);
+        setTransactions([]);
+      }
+    } catch (error) {
+      console.error("Error performing search:", error);
+      setTransactions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = async ({
+    startDate,
+    endDate,
+    actionId,
+  }: {
+    startDate: string;
+    endDate: string;
+    actionId?: string;
+  }) => {
+    const newParams = { startDate, endDate, actionId };
+    setSearchParams(newParams);
+    setCurrentPage(1); // Reset to first page on new search
+
+    // Save search parameters to localStorage
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "transactionSearchParams",
+        JSON.stringify({
+          ...newParams,
+          page: 1,
+        })
+      );
+    }
+
+    await performSearch(startDate, endDate, 1, actionId);
+    setSearchPerformed(true);
+  };
+
+  const handlePageChange = async (newPage: number) => {
+    if (
+      !searchParams ||
+      newPage < 1 ||
+      newPage > totalPages ||
+      newPage === currentPage
+    )
+      return;
+
+    // Save the new page to localStorage
+    if (typeof window !== "undefined" && searchParams) {
+      localStorage.setItem(
+        "transactionSearchParams",
+        JSON.stringify({
+          ...searchParams,
+          page: newPage,
+        })
+      );
+    }
+
+    setCurrentPage(newPage);
+    await performSearch(
+      searchParams.startDate,
+      searchParams.endDate,
+      newPage,
+      searchParams.actionId
+    );
+  };
+
+  // Generate pagination buttons
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const pageButtons = [];
+    const maxVisiblePages = 5;
+
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    // Previous button
+    pageButtons.push(
+      <button
+        key="prev"
+        onClick={() => handlePageChange(currentPage - 1)}
+        disabled={currentPage === 1 || isLoading}
+        className="px-3 py-2 rounded border border-border disabled:opacity-50"
+        aria-label="Previous page"
+      >
+        &laquo;
+      </button>
+    );
+
+    // Page numbers
+    for (let i = startPage; i <= endPage; i++) {
+      pageButtons.push(
+        <button
+          key={i}
+          onClick={() => handlePageChange(i)}
+          disabled={i === currentPage || isLoading}
+          className={`px-3 py-2 rounded ${
+            i === currentPage ? "bg-primary text-white" : "border border-border"
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    // Next button
+    pageButtons.push(
+      <button
+        key="next"
+        onClick={() => handlePageChange(currentPage + 1)}
+        disabled={currentPage === totalPages || isLoading}
+        className="px-3 py-2 rounded border border-border disabled:opacity-50"
+        aria-label="Next page"
+      >
+        &raquo;
+      </button>
+    );
+
+    return (
+      <div className="flex justify-center space-x-2 mt-6">{pageButtons}</div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+
+      <main className="container mx-auto py-8 px-4 flex-grow">
+        <div className="max-w-4xl mx-auto">
+          <SearchForm
+            onSearch={handleSearch}
+            isLoading={isLoading}
+            initialValues={searchParams || undefined}
+          />
+
+          {searchPerformed && (
+            <div className="mt-8">
+              {isLoading && transactions.length === 0 ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="text-center py-8 card">
+                  <p className="text-lg mb-2">No transactions found</p>
+                  <p className="text-muted-foreground">
+                    No transactions found in the selected date range.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-4">
+                    <h2 className="text-xl font-semibold">Search Results</h2>
+                    <div className="flex flex-col items-end">
+                      <p className="text-sm text-muted-foreground">
+                        Showing {(currentPage - 1) * 50 + 1}-
+                        {Math.min(currentPage * 50, totalResults)} of{" "}
+                        {totalResults} transaction
+                        {totalResults !== 1 ? "s" : ""}
+                      </p>
+                      {searchParams?.actionId && (
+                        <div className="mt-1 inline-flex items-center py-1 px-2 rounded-md bg-primary/10 text-primary text-xs">
+                          <span className="mr-1">Filtered by Action ID:</span>
+                          <span className="font-medium">
+                            {searchParams.actionId}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="border border-[var(--border)] rounded-md overflow-hidden">
+                    {/* Table header */}
+                    <div className="flex items-center bg-[var(--secondary)] border-b border-[var(--border)] py-3 px-4 font-medium text-sm text-[var(--secondary-foreground)]">
+                      <div className="flex-1 min-w-0">Customer Email</div>
+
+                      <div className="flex-1 min-w-0 hidden md:block">
+                        Reference
+                      </div>
+
+                      <div className="flex-none w-24 text-center">Status</div>
+
+                      <div className="flex-none w-28 text-right">Amount</div>
+
+                      <div className="flex-1 text-right hidden md:block">
+                        Date
+                      </div>
+
+                      <div className="flex-none w-8 text-center ml-2">
+                        {/* Empty header for actions column */}
+                      </div>
+                    </div>
+
+                    {/* Table body */}
+                    <div>
+                      {transactions.map((transaction) => (
+                        <TransactionCard
+                          key={transaction.id}
+                          transaction={transaction}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {renderPagination()}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }

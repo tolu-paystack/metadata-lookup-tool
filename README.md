@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Paystack Transaction Lookup Tool
+
+A modern web application for searching and viewing Paystack transaction details using transaction metadata. This tool allows merchants to easily search for transactions by date range and Action ID.
+
+## Features
+
+- **Transaction Search**: Filter transactions by date range with precise time selection
+- **Action ID Filtering**: Find transactions associated with specific Action IDs in metadata
+- **Detailed Transaction View**: View comprehensive information about each transaction
+- **Paystack Dashboard Integration**: Direct links to view transactions in the Paystack dashboard
+- **Refund Information**: View and manage refund details for transactions
+
+## Environment Setup
+
+Before running the application, create a `.env.local` file in the root directory with the following variables:
+
+```
+PAYSTACK_SECRET_KEY=your_paystack_secret_key_here
+```
 
 ## Getting Started
 
-First, run the development server:
+### Local Development
+
+First, install the dependencies:
+
+```bash
+npm install
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Production Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To create a production build:
 
-## Learn More
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Docker Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This application can be easily deployed using Docker. For detailed instructions, see the [Docker Setup Guide](./DOCKER.md).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Quick start:
 
-## Deploy on Vercel
+```bash
+# Copy the environment example
+cp env.example .env
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Add your Paystack Secret Key to the .env file
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Build and run with Docker Compose
+docker-compose up -d --build
+```
+
+## Technology Stack
+
+- **Framework**: [Next.js](https://nextjs.org) with TypeScript
+- **Styling**: Tailwind CSS
+- **API Integration**: Paystack API
+- **Containerization**: Docker
+
+## Action ID Format
+
+This tool looks for Action IDs in transaction metadata with the following structure:
+
+```javascript
+metadata: {
+  "custom_fields": [
+    {
+      "display_name": "Action ID",
+      "variable_name": "Action ID",
+      "value": "ACT-123"  // The actual action ID
+    }
+  ]
+}
+```
