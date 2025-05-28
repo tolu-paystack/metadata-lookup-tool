@@ -80,10 +80,10 @@ interface ApiResponse {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
-    const id = params.id;
+    const id = (await params).id;
     
     // Validate input
     if (!id) {
